@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이미지 레퍼런스 — UI 목업 v2</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:#f5f5f7;color:#333}
+
+/* 사이드바 */
+.sb{position:fixed;left:0;top:0;width:56px;height:100vh;background:#fff;border-right:1px solid #e5e5ea;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;z-index:100}
+.sb .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;margin-bottom:12px}
+.sb button{width:40px;height:40px;border:none;background:transparent;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;color:#888;transition:.15s}
+.sb button:hover{background:#f0f0f5;color:#6366f1}
+.sb button.on{background:#eef2ff;color:#6366f1}
+.sb .sp{flex:1}
+.sb .ct{font-size:10px;color:#999;text-align:center;line-height:1.3}
+.sb .ct b{font-size:16px;color:#6366f1;display:block}
+
+.main{margin-left:56px}
+
+/* 탑바 */
+.top{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid #e5e5ea}
+.top-in{max-width:1200px;margin:0 auto;padding:12px 20px}
+.sr{display:flex;justify-content:center;margin-bottom:10px}
+.sbox{width:100%;max-width:560px;display:flex;align-items:center;gap:8px;background:#f5f5f7;border:1px solid #e5e5ea;border-radius:999px;padding:8px 16px}
+.sbox input{flex:1;border:none;background:transparent;outline:none;font-size:13px}
+.pt{display:flex;justify-content:center;gap:4px;margin-bottom:10px}
+.pt button{padding:7px 20px;border-radius:999px;border:1.5px solid #e5e5ea;background:#fff;font-size:12px;font-weight:600;color:#666;cursor:pointer;transition:.15s}
+.pt button.on{background:#6366f1;color:#fff;border-color:#6366f1}
+.pt .bdg{display:inline-block;background:#ef4444;color:#fff;font-size:9px;border-radius:99px;padding:1px 5px;margin-left:4px;font-weight:700}
+.ch{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.ch button{padding:6px 16px;border-radius:999px;border:1px solid #e5e5ea;background:#fff;font-size:11px;font-weight:500;color:#666;white-space:nowrap;cursor:pointer;transition:.15s}
+.ch button.on{background:#6366f1;color:#fff;border-color:#6366f1}
+
+/* 세트 카드 (비포/애프터) */
+.set-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 20px 0;max-width:1200px;margin:0 auto}
+.set-card{border-radius:14px;overflow:hidden;background:#fff;border:1px solid #e8e8ed;cursor:pointer;transition:.2s}
+.set-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
+.set-imgs{display:flex;position:relative}
+.set-imgs .half{width:50%;position:relative;overflow:hidden}
+.set-imgs .half img,.set-imgs .half .ph{width:100%;height:220px;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600}
+.set-imgs .tag{position:absolute;top:8px;z-index:2;padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;color:#fff;backdrop-filter:blur(4px)}
+.set-imgs .tag-b{left:8px;background:rgba(239,68,68,.8)}
+.set-imgs .tag-a{right:8px;background:rgba(99,102,241,.8)}
+.set-imgs .arrow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;width:32px;height:32px;border-radius:50%;background:#fff;border:1px solid #e5e5ea;display:flex;align-items:center;justify-content:center;font-size:14px;color:#6366f1;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.set-meta{padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
+.set-meta .badge{padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;color:#fff;background:#8b5cf6}
+.set-meta .date{font-size:10px;color:#aaa}
+.set-meta .sv{padding:2px 8px;border-radius:6px;border:1px solid #e5e5ea;background:#fff;font-size:9px;font-weight:600;color:#888;cursor:pointer}
+.set-meta .sv.saved{background:#6366f1;color:#fff;border-color:#6366f1}
+
+/* 일반 카드 그리드 */
+.grid{columns:5;column-gap:16px;padding:16px 20px;max-width:1200px;margin:0 auto}
+@media(max-width:1100px){.grid{columns:4}}
+.card{break-inside:avoid;margin-bottom:16px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid #e8e8ed;cursor:pointer;transition:.2s;position:relative}
+.card:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px)}
+.card .img{width:100%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;position:relative}
+.card .ov{position:absolute;inset:0;background:rgba(0,0,0,.25);opacity:0;display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s}
+.card:hover .ov{opacity:1}
+.ov button{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);border:none;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.card .mt{padding:10px 12px}
+.card .mt-top{display:flex;align-items:center;justify-content:space-between}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;color:#fff}
+.card .sv{padding:2px 8px;border-radius:6px;border:1px solid #e5e5ea;background:#fff;font-size:9px;font-weight:600;color:#888;cursor:pointer}
+.card .sv.saved{background:#6366f1;color:#fff;border-color:#6366f1}
+.card .dt{font-size:10px;color:#aaa;margin-top:6px}
+
+.page{display:none}.page.active{display:block}
+
+/* 세트 비교 모달 */
+.cmp-modal{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center}
+.cmp-modal.open{display:flex}
+.cmp-box{background:#fff;border-radius:16px;padding:24px;max-width:880px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative}
+.cmp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cmp-head .badge{padding:3px 10px;background:#8b5cf6}
+.cmp-head .date{font-size:11px;color:#999;margin-left:10px}
+.cmp-head button{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;background:#6366f1;color:#fff;border:none;cursor:pointer}
+.cmp-close{position:absolute;top:-10px;right:-10px;width:28px;height:28px;border-radius:50%;background:#fff;border:none;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.cmp-body{display:flex;gap:16px;align-items:stretch}
+.cmp-side{flex:1;border-radius:12px;overflow:hidden;border:2px solid transparent}
+.cmp-side.before{border-color:#fca5a5}
+.cmp-side.after{border-color:#a5b4fc}
+.cmp-side .label{text-align:center;padding:8px;font-size:11px;font-weight:700;color:#fff;letter-spacing:1px}
+.cmp-side.before .label{background:#ef4444}
+.cmp-side.after .label{background:#6366f1}
+.cmp-side .ph{height:340px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:600}
+.cmp-arrow{display:flex;align-items:center;justify-content:center}
+.cmp-arrow span{width:40px;height:40px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;font-size:18px;color:#6366f1}
+</style>
+</head>
+<body>
+
+<nav class="sb">
+  <div class="logo">✦</div>
+  <button class="on" onclick="showPage('browse')">🖼️</button>
+  <button onclick="alert('✨ 오늘 분량 생성 시작!\n\n비포/애프터 2세트(4장)\n건강식단 6장 + 운동 4장\n체중계 3장 + 제품연출 4장\n= 총 21장')">✨</button>
+  <button onclick="alert('⚙️ 설정 드로어\n• API키\n• 블로그 파라미터\n• 주제별 생성 장수')">⚙️</button>
+  <div class="sp"></div>
+  <div class="ct"><b>21</b>장</div>
+</nav>
+
+<div class="main">
+  <div class="top">
+    <div class="top-in">
+      <div class="sr"><div class="sbox"><span>🔍</span><input placeholder="프롬프트 키워드로 검색..."></div></div>
+      <div class="pt">
+        <button class="on" id="t1" onclick="showPage('browse')">🖼️ 이미지 브라우징</button>
+        <button id="t2" onclick="showPage('board')">📌 내 보드 <span class="bdg">3</span></button>
+      </div>
+      <div class="ch" id="ch1">
+        <button class="on" onclick="fChip(this)">전체 (21)</button>
+        <button onclick="fChip(this)">비포/애프터 (2세트)</button>
+        <button onclick="fChip(this)">건강 식단 (6)</button>
+        <button onclick="fChip(this)">운동 (4)</button>
+        <button onclick="fChip(this)">체중계 (3)</button>
+        <button onclick="fChip(this)">제품 연출 (4)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 1: 브라우징 -->
+  <div class="page active" id="p-browse">
+
+    <!-- ★ 비포/애프터 세트 카드 (가로 넓게, 2열) ★ -->
+    <div class="set-row">
+      <div class="set-card" onclick="openCmp()">
+        <div class="set-imgs">
+          <div class="half"><span class="tag tag-b">BEFORE</span><div class="ph" style="background:linear-gradient(135deg,#c084fc,#7c3aed)">비포 78kg<br>걱정스러운 표정</div></div>
+          <div class="arrow">→</div>
+          <div class="half"><span class="tag tag-a">AFTER</span><div class="ph" style="background:linear-gradient(135deg,#e9d5ff,#7c3aed)">애프터 58kg<br>자신감 있는 표정</div></div>
+        </div>
+        <div class="set-meta">
+          <div><span class="badge" style="background:#8b5cf6">비포/애프터 세트</span><span class="date" style="margin-left:8px">3월 19일 · 세트 1</span></div>
+          <button class="sv saved" onclick="event.stopPropagation()">저장됨 ✓</button>
+        </div>
+      </div>
+      <div class="set-card" onclick="openCmp()">
+        <div class="set-imgs">
+          <div class="half"><span class="tag tag-b">BEFORE</span><div class="ph" style="background:linear-gradient(135deg,#d8b4fe,#6d28d9)">비포 78kg<br>거울 앞 한숨</div></div>
+          <div class="arrow">→</div>
+          <div class="half"><span class="tag tag-a">AFTER</span><div class="ph" style="background:linear-gradient(135deg,#f0abfc,#9333ea)">애프터 58kg<br>환하게 웃는 모습</div></div>
+        </div>
+        <div class="set-meta">
+          <div><span class="badge" style="background:#8b5cf6">비포/애프터 세트</span><span class="date" style="margin-left:8px">3월 19일 · 세트 2</span></div>
+          <button class="sv" onclick="event.stopPropagation()">보드에 저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일반 카드 (매소니 그리드) -->
+    <div class="grid">
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#86efac,#16a34a);height:220px">닭가슴살 샐러드<br>플랫레이<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#22c55e">건강 식단</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#fdba74,#ea580c);height:260px">홈트레이닝 장비<br>요가매트+덤벨<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#f97316">운동</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#6ee7b7,#059669);height:240px">파이토케미컬 보충제<br>라이프스타일 연출<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#10b981">제품 연출</span><button class="sv saved">저장됨 ✓</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#93c5fd,#2563eb);height:200px">디지털 체중계<br>58.0kg 표시<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#3b82f6">체중계</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#bbf7d0,#15803d);height:280px">그릭요거트+베리<br>간식 트레이<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#22c55e">건강 식단</span><button class="sv saved">저장됨 ✓</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#fed7aa,#c2410c);height:200px">모닝 러닝 장면<br>운동화+공원<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#f97316">운동</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#a7f3d0,#047857);height:240px">현미밥+고등어구이<br>한식 다이어트<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#22c55e">건강 식단</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#a7f3d0,#065f46);height:260px">아침 루틴 연출<br>보조제+차+과일<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#10b981">제품 연출</span><button class="sv saved">저장됨 ✓</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#bfdbfe,#1d4ed8);height:220px">줄자 측정 장면<br>허리둘레 변화<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#3b82f6">체중계</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#d9f99d,#65a30d);height:180px">아보카도 토스트<br>브런치 스타일<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#22c55e">건강 식단</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#fde68a,#d97706);height:260px">요가 매트 위<br>스트레칭<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#f97316">운동</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#99f6e4,#0d9488);height:220px">제품 플랫레이<br>야채+과일 배치<div class="ov"><button>⬇</button><button>🔍</button></div></div><div class="mt"><div class="mt-top"><span class="badge" style="background:#10b981">제품 연출</span><button class="sv">보드에 저장</button></div><div class="dt">3월 19일</div></div></div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: 내 보드 -->
+  <div class="page" id="p-board">
+    <div style="padding:16px 20px 0;max-width:1200px;margin:0 auto">
+      <div class="ch">
+        <button class="on">전체 저장 (4)</button>
+        <button>비포/애프터 세트 (1)</button>
+        <button>건강 식단 (1)</button>
+        <button>제품 연출 (2)</button>
+      </div>
+    </div>
+
+    <!-- 보드에 저장된 세트 -->
+    <div class="set-row">
+      <div class="set-card" onclick="openCmp()">
+        <div class="set-imgs">
+          <div class="half"><span class="tag tag-b">BEFORE</span><div class="ph" style="background:linear-gradient(135deg,#c084fc,#7c3aed)">비포 78kg</div></div>
+          <div class="arrow">→</div>
+          <div class="half"><span class="tag tag-a">AFTER</span><div class="ph" style="background:linear-gradient(135deg,#e9d5ff,#7c3aed)">애프터 58kg</div></div>
+        </div>
+        <div class="set-meta">
+          <div><span class="badge" style="background:#8b5cf6">비포/애프터 세트</span></div>
+          <button class="sv saved">저장됨 ✓</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 보드에 저장된 일반 카드 -->
+    <div class="grid">
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#6ee7b7,#059669);height:240px">파이토케미컬 보충제<br>라이프스타일</div><div class="mt"><div class="mt-top"><span class="badge" style="background:#10b981">제품 연출</span><button class="sv saved">저장됨 ✓</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#bbf7d0,#15803d);height:280px">그릭요거트+베리</div><div class="mt"><div class="mt-top"><span class="badge" style="background:#22c55e">건강 식단</span><button class="sv saved">저장됨 ✓</button></div><div class="dt">3월 19일</div></div></div>
+      <div class="card"><div class="img" style="background:linear-gradient(135deg,#a7f3d0,#065f46);height:260px">아침 루틴 연출</div><div class="mt"><div class="mt-top"><span class="badge" style="background:#10b981">제품 연출</span><button class="sv saved">저장됨 ✓</button></div><div class="dt">3월 19일</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 세트 비교 프리뷰 모달 -->
+<div class="cmp-modal" id="cmpModal" onclick="closeCmp()">
+  <div class="cmp-box" onclick="event.stopPropagation()">
+    <button class="cmp-close" onclick="closeCmp()">✕</button>
+    <div class="cmp-head">
+      <div style="display:flex;align-items:center"><span class="badge" style="background:#8b5cf6;padding:4px 12px;font-size:11px">비포/애프터 세트 비교</span><span class="date">3월 19일 14:23</span></div>
+      <button>⬇ 세트 다운로드</button>
+    </div>
+    <div class="cmp-body">
+      <div class="cmp-side before">
+        <div class="label">BEFORE</div>
+        <div class="ph" style="background:linear-gradient(135deg,#c084fc,#7c3aed)">비포 78kg<br>같은 사람<br>수채화 일러스트</div>
+      </div>
+      <div class="cmp-arrow"><span>→</span></div>
+      <div class="cmp-side after">
+        <div class="label">AFTER</div>
+        <div class="ph" style="background:linear-gradient(135deg,#e9d5ff,#7c3aed)">애프터 58kg<br>같은 사람, 슬림<br>밝은 색감</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPage(p){
+  document.querySelectorAll('.page').forEach(function(el){el.classList.remove('active')});
+  document.getElementById('p-'+p).classList.add('active');
+  document.getElementById('t1').classList.toggle('on',p==='browse');
+  document.getElementById('t2').classList.toggle('on',p==='board');
+}
+function fChip(b){b.parentElement.querySelectorAll('button').forEach(function(x){x.classList.remove('on')});b.classList.add('on')}
+function openCmp(){document.getElementById('cmpModal').classList.add('open')}
+function closeCmp(){document.getElementById('cmpModal').classList.remove('open')}
+</script>
+</body>
+</html>

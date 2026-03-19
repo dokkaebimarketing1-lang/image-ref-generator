@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이미지 레퍼런스 생성기 — UI 목업</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f7; color:#333; }
+
+  /* ── 사이드바 ── */
+  .sidebar {
+    position:fixed; left:0; top:0; width:56px; height:100vh;
+    background:#fff; border-right:1px solid #e5e5ea; display:flex; flex-direction:column; align-items:center;
+    padding:14px 0; gap:6px; z-index:100;
+  }
+  .sidebar .logo { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#6366f1,#a855f7); display:flex; align-items:center; justify-content:center; color:#fff; font-size:16px; margin-bottom:12px; }
+  .sidebar button {
+    width:40px; height:40px; border:none; background:transparent; border-radius:10px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:18px; color:#888; transition:all .15s;
+  }
+  .sidebar button:hover { background:#f0f0f5; color:#6366f1; }
+  .sidebar button.active { background:#eef2ff; color:#6366f1; }
+  .sidebar .spacer { flex:1; }
+  .sidebar .count { font-size:10px; color:#999; text-align:center; line-height:1.3; }
+  .sidebar .count b { font-size:16px; color:#6366f1; display:block; }
+
+  /* ── 메인 ── */
+  .main { margin-left:56px; }
+
+  /* ── 탑바 ── */
+  .topbar {
+    position:sticky; top:0; z-index:50; background:rgba(255,255,255,.85); backdrop-filter:blur(12px);
+    border-bottom:1px solid #e5e5ea;
+  }
+  .topbar-inner { max-width:1200px; margin:0 auto; padding:12px 20px; }
+  .search-row { display:flex; justify-content:center; margin-bottom:10px; }
+  .search-box {
+    width:100%; max-width:560px; display:flex; align-items:center; gap:8px;
+    background:#f5f5f7; border:1px solid #e5e5ea; border-radius:999px; padding:8px 16px;
+  }
+  .search-box span { color:#aaa; font-size:14px; }
+  .search-box input { flex:1; border:none; background:transparent; outline:none; font-size:13px; }
+
+  /* 페이지 탭 */
+  .page-tabs { display:flex; justify-content:center; gap:4px; margin-bottom:10px; }
+  .page-tabs button {
+    padding:7px 20px; border-radius:999px; border:1.5px solid #e5e5ea; background:#fff;
+    font-size:12px; font-weight:600; color:#666; cursor:pointer; transition:all .15s;
+  }
+  .page-tabs button.active { background:#6366f1; color:#fff; border-color:#6366f1; }
+  .page-tabs button:hover:not(.active) { border-color:#6366f1; color:#6366f1; }
+  .page-tabs .badge { display:inline-block; background:#ef4444; color:#fff; font-size:9px; border-radius:99px; padding:1px 5px; margin-left:4px; font-weight:700; }
+
+  /* 카테고리 칩 */
+  .chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
+  .chips button {
+    padding:6px 16px; border-radius:999px; border:1px solid #e5e5ea; background:#fff;
+    font-size:11px; font-weight:500; color:#666; white-space:nowrap; cursor:pointer; transition:all .15s;
+  }
+  .chips button.active { background:#6366f1; color:#fff; border-color:#6366f1; }
+  .chips button:hover:not(.active) { background:#f5f5f7; }
+
+  /* ── 매소니 그리드 ── */
+  .grid { columns:5; column-gap:16px; padding:20px; max-width:1200px; margin:0 auto; }
+  @media(max-width:1100px){ .grid{columns:4;} }
+  @media(max-width:800px){ .grid{columns:3;} }
+  @media(max-width:500px){ .grid{columns:2;} }
+
+  /* ── 카드 ── */
+  .card {
+    break-inside:avoid; margin-bottom:16px; border-radius:14px; overflow:hidden;
+    background:#fff; border:1px solid #e8e8ed; cursor:pointer; transition:all .2s;
+    position:relative;
+  }
+  .card:hover { box-shadow:0 8px 24px rgba(0,0,0,.08); transform:translateY(-2px); }
+  .card .img {
+    width:100%; display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:#fff; font-weight:600; letter-spacing:.5px; position:relative; overflow:hidden;
+  }
+  /* 호버 오버레이 */
+  .card .overlay {
+    position:absolute; inset:0; background:rgba(0,0,0,.25); opacity:0;
+    display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity .2s;
+  }
+  .card:hover .overlay { opacity:1; }
+  .overlay button {
+    width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.92); border:none;
+    font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);
+  }
+
+  .card .meta { padding:10px 12px; }
+  .card .meta-top { display:flex; align-items:center; justify-content:space-between; }
+  .card .badge {
+    display:inline-block; padding:2px 8px; border-radius:999px; font-size:9px; font-weight:700; color:#fff;
+  }
+  .card .save-btn {
+    padding:2px 8px; border-radius:6px; border:1px solid #e5e5ea; background:#fff;
+    font-size:9px; font-weight:600; color:#888; cursor:pointer; transition:all .15s;
+  }
+  .card .save-btn:hover { border-color:#6366f1; color:#6366f1; }
+  .card .save-btn.saved { background:#6366f1; color:#fff; border-color:#6366f1; }
+  .card .date { font-size:10px; color:#aaa; margin-top:6px; }
+
+  /* 배지 색상 */
+  .bg-purple { background:#8b5cf6; }
+  .bg-green { background:#22c55e; }
+  .bg-orange { background:#f97316; }
+  .bg-blue { background:#3b82f6; }
+  .bg-emerald { background:#10b981; }
+
+  /* 이미지 높이 변주 */
+  .h-200 { height:200px; }
+  .h-240 { height:240px; }
+  .h-280 { height:280px; }
+  .h-180 { height:180px; }
+  .h-220 { height:220px; }
+  .h-260 { height:260px; }
+  .h-300 { height:300px; }
+
+  /* 페이지 전환 */
+  .page { display:none; }
+  .page.active { display:block; }
+
+  /* 빈 보드 */
+  .empty-board { text-align:center; padding:80px 20px; color:#999; }
+  .empty-board .icon { font-size:48px; margin-bottom:12px; }
+  .empty-board p { font-size:13px; }
+  .empty-board b { color:#6366f1; }
+
+  /* 프로그레스 */
+  .progress-bar { margin:0 20px; padding:16px; background:#eef2ff; border-radius:12px; border:1px solid #c7d2fe; }
+  .progress-bar .label { font-size:12px; font-weight:600; color:#4f46e5; margin-bottom:6px; display:flex; justify-content:space-between; }
+  .progress-bar .bar { height:6px; background:#c7d2fe; border-radius:99px; overflow:hidden; }
+  .progress-bar .bar-fill { height:100%; background:linear-gradient(90deg,#6366f1,#a855f7); border-radius:99px; transition:width .3s; }
+  .progress-bar .sub { font-size:10px; color:#818cf8; margin-top:6px; }
+
+  /* 프리뷰 모달 */
+  .modal-backdrop {
+    display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.55);
+    backdrop-filter:blur(4px); align-items:center; justify-content:center;
+  }
+  .modal-backdrop.open { display:flex; }
+  .modal {
+    background:#fff; border-radius:16px; padding:20px; display:flex; gap:20px;
+    max-width:820px; max-height:88vh; box-shadow:0 20px 60px rgba(0,0,0,.2);
+  }
+  .modal .preview-img { width:440px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff; font-weight:600; }
+  .modal .info { width:200px; display:flex; flex-direction:column; gap:12px; }
+  .modal .info .badge { align-self:flex-start; }
+  .modal .info .date { font-size:11px; color:#999; }
+  .modal .info .prompt { font-size:10px; color:#888; line-height:1.6; flex:1; overflow-y:auto; }
+  .modal .info button { width:100%; padding:8px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; border:none; }
+  .modal .info .btn-primary { background:#6366f1; color:#fff; }
+  .modal .info .btn-outline { background:#fff; color:#555; border:1px solid #e5e5ea; }
+  .modal .close { position:absolute; top:-10px; right:-10px; width:28px; height:28px; border-radius:50%; background:#fff; border:none; font-size:14px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  .modal-wrap { position:relative; }
+  .modal .nav-btn { position:absolute; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.9); border:none; font-size:16px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+  .modal .nav-prev { left:-50px; }
+  .modal .nav-next { right:-50px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ 사이드바 ═══ -->
+<nav class="sidebar">
+  <div class="logo">✦</div>
+  <button class="active" title="브라우징" onclick="showPage('browse')">🖼️</button>
+  <button title="오늘 분량 생성" onclick="simulateGenerate()">✨</button>
+  <button title="설정" onclick="alert('설정 드로어 열림:\n• API키\n• 블로그 파라미터\n• 주제별 생성 장수')">⚙️</button>
+  <div class="spacer"></div>
+  <div class="count"><b id="totalCount">21</b>장</div>
+</nav>
+
+<!-- ═══ 메인 ═══ -->
+<div class="main">
+
+  <!-- 탑바 -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="search-row">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" placeholder="프롬프트 키워드로 검색...">
+        </div>
+      </div>
+
+      <!-- 페이지 탭 -->
+      <div class="page-tabs">
+        <button class="active" id="tab-browse" onclick="showPage('browse')">🖼️ 이미지 브라우징</button>
+        <button id="tab-board" onclick="showPage('board')">📌 내 보드 <span class="badge" id="boardBadge">3</span></button>
+      </div>
+
+      <!-- 카테고리 필터 (브라우징용) -->
+      <div class="chips" id="chips-browse">
+        <button class="active" onclick="filterChip(this)">전체 (21)</button>
+        <button onclick="filterChip(this)">비포/애프터 (4)</button>
+        <button onclick="filterChip(this)">건강 식단 (6)</button>
+        <button onclick="filterChip(this)">운동/라이프스타일 (4)</button>
+        <button onclick="filterChip(this)">체중계/측정 (3)</button>
+        <button onclick="filterChip(this)">제품 연출 (4)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE 1: 브라우징 ═══ -->
+  <div class="page active" id="page-browse">
+    <div class="grid">
+
+      <!-- 비포/애프터 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img bg-purple h-280" style="background:linear-gradient(135deg,#c084fc,#7c3aed)">
+          비포 체형 일러스트<br>78kg
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-purple">비포/애프터</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 건강 식단 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-220" style="background:linear-gradient(135deg,#86efac,#16a34a)">
+          닭가슴살 샐러드<br>플랫레이
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-green">건강 식단</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 운동 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-260" style="background:linear-gradient(135deg,#fdba74,#ea580c)">
+          홈트레이닝 장비<br>요가매트 + 덤벨
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-orange">운동</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 제품 연출 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-240" style="background:linear-gradient(135deg,#6ee7b7,#059669)">
+          파이토케미컬 보충제<br>라이프스타일 연출
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-emerald">제품 연출</span><button class="save-btn saved" onclick="toggleSave(event,this)">저장됨 ✓</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 체중계 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-200" style="background:linear-gradient(135deg,#93c5fd,#2563eb)">
+          디지털 체중계<br>58.0kg 표시
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-blue">체중계</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 건강 식단 2 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-300" style="background:linear-gradient(135deg,#bbf7d0,#15803d)">
+          그릭요거트 + 베리<br>간식 트레이
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-green">건강 식단</span><button class="save-btn saved" onclick="toggleSave(event,this)">저장됨 ✓</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 비포/애프터 2 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-280" style="background:linear-gradient(135deg,#e9d5ff,#9333ea)">
+          애프터 체형 일러스트<br>58kg · 자신감
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-purple">비포/애프터</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 운동 2 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-200" style="background:linear-gradient(135deg,#fed7aa,#c2410c)">
+          모닝 러닝 장면<br>운동화 + 공원
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-orange">운동</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 건강 식단 3 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-240" style="background:linear-gradient(135deg,#a7f3d0,#047857)">
+          현미밥 + 고등어구이<br>한식 다이어트
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-green">건강 식단</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 제품 2 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-260" style="background:linear-gradient(135deg,#a7f3d0,#065f46)">
+          아침 루틴 연출<br>보조제 + 차 + 과일
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-emerald">제품 연출</span><button class="save-btn saved" onclick="toggleSave(event,this)">저장됨 ✓</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 체중계 2 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-220" style="background:linear-gradient(135deg,#bfdbfe,#1d4ed8)">
+          줄자 측정 장면<br>허리둘레 변화
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-blue">체중계</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 비포 3 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-240" style="background:linear-gradient(135deg,#ddd6fe,#6d28d9)">
+          비포 거울 장면<br>체중계 위 걱정
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-purple">비포/애프터</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 건강 식단 4 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-180" style="background:linear-gradient(135deg,#d9f99d,#65a30d)">
+          아보카도 토스트<br>브런치 스타일
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-green">건강 식단</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 운동 3 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-260" style="background:linear-gradient(135deg,#fde68a,#d97706)">
+          요가 매트 위<br>스트레칭 장면
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-orange">운동</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <!-- 제품 3 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-220" style="background:linear-gradient(135deg,#99f6e4,#0d9488)">
+          제품 플랫레이<br>야채 + 과일 배치
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-emerald">제품 연출</span><button class="save-btn" onclick="toggleSave(event,this)">보드에 저장</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ PAGE 2: 내 보드 ═══ -->
+  <div class="page" id="page-board">
+
+    <!-- 보드용 칩 -->
+    <div style="padding:16px 20px 0;">
+      <div class="chips">
+        <button class="active">전체 저장 (3)</button>
+        <button>건강 식단 (1)</button>
+        <button>제품 연출 (2)</button>
+      </div>
+    </div>
+
+    <div class="grid" id="board-grid">
+      <!-- 저장된 카드 3개 -->
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-240" style="background:linear-gradient(135deg,#6ee7b7,#059669)">
+          파이토케미컬 보충제<br>라이프스타일 연출
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-emerald">제품 연출</span><button class="save-btn saved" onclick="toggleSave(event,this)">저장됨 ✓</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-300" style="background:linear-gradient(135deg,#bbf7d0,#15803d)">
+          그릭요거트 + 베리<br>간식 트레이
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-green">건강 식단</span><button class="save-btn saved" onclick="toggleSave(event,this)">저장됨 ✓</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+
+      <div class="card" onclick="openPreview(this)">
+        <div class="img h-260" style="background:linear-gradient(135deg,#a7f3d0,#065f46)">
+          아침 루틴 연출<br>보조제 + 차 + 과일
+          <div class="overlay"><button>⬇</button><button>🔍</button></div>
+        </div>
+        <div class="meta">
+          <div class="meta-top"><span class="badge bg-emerald">제품 연출</span><button class="save-btn saved" onclick="toggleSave(event,this)">저장됨 ✓</button></div>
+          <div class="date">3월 19일</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ 프리뷰 모달 ═══ -->
+<div class="modal-backdrop" id="previewModal" onclick="closePreview()">
+  <div class="modal-wrap" onclick="event.stopPropagation()">
+    <button class="modal close" onclick="closePreview()" style="position:absolute;top:-10px;right:-10px;z-index:10;width:28px;height:28px;border-radius:50%;background:#fff;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15);">✕</button>
+    <button class="modal nav-btn nav-prev">‹</button>
+    <button class="modal nav-btn nav-next">›</button>
+    <div class="modal">
+      <div class="preview-img" id="previewImg" style="background:linear-gradient(135deg,#6ee7b7,#059669); width:440px; height:400px; border-radius:10px;">
+        큰 프리뷰 이미지
+      </div>
+      <div class="info">
+        <span class="badge bg-emerald" style="padding:3px 10px; border-radius:99px; font-size:10px; font-weight:700; color:#fff;">제품 연출</span>
+        <div class="date">3월 19일 14:23</div>
+        <div class="prompt">Aesthetic lifestyle product photography of a health supplement bottle on a clean white marble surface. Surrounding the bottle: fresh green vegetables, colorful fruits, and a glass of water...</div>
+        <button class="btn-primary" style="padding:10px; border-radius:8px; font-size:12px; font-weight:600; background:#6366f1; color:#fff; border:none; cursor:pointer;">⬇ 다운로드</button>
+        <button class="btn-outline" style="padding:10px; border-radius:8px; font-size:12px; font-weight:600; background:#fff; color:#555; border:1px solid #e5e5ea; cursor:pointer;">📋 클립보드 복사</button>
+        <button class="btn-outline" style="padding:10px; border-radius:8px; font-size:12px; font-weight:600; background:#fff; color:#6366f1; border:1px solid #6366f1; cursor:pointer;">📌 보드에 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('tab-browse').classList.toggle('active', page === 'browse');
+  document.getElementById('tab-board').classList.toggle('active', page === 'board');
+  document.querySelectorAll('.sidebar button')[0].classList.toggle('active', page === 'browse');
+}
+
+function filterChip(btn) {
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function toggleSave(e, btn) {
+  e.stopPropagation();
+  btn.classList.toggle('saved');
+  btn.textContent = btn.classList.contains('saved') ? '저장됨 ✓' : '보드에 저장';
+  updateBoardCount();
+}
+
+function updateBoardCount() {
+  const count = document.querySelectorAll('#page-browse .save-btn.saved').length;
+  document.getElementById('boardBadge').textContent = count;
+}
+
+function openPreview() {
+  document.getElementById('previewModal').classList.add('open');
+}
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+}
+
+function simulateGenerate() {
+  alert('⏳ 오늘 분량 생성 시작!\n\n비포/애프터 4장 + 건강식단 6장 + 운동 4장\n+ 체중계 3장 + 제품연출 4장 = 총 21장\n\n생성이 완료되면 그리드에 자동으로 채워집니다.');
+}
+</script>
+
+</body>
+</html>
